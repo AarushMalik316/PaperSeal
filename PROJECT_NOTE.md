@@ -52,12 +52,12 @@ Nothing is ever edited or deleted. A correction marks the previous version Super
 7. *(3:40)* **Refusal, live.** Switch to an unauthorized wallet → Unauthorized-action demonstration → Attempt. The contract returns `NotAuthorizedIssuer(0x…)`. Optionally broadcast with manual gas to get a reverted tx hash on BaseScan.
 8. *(4:20)* **Close:** open the Access Matrix: why this beats a spreadsheet, and the path to real life (below).
 
-**Post-deployment checklist** (fill in after deploying; these values must come from real, confirmed transactions):
+**Live deployment on Base Sepolia** (real, confirmed transactions):
 
-- Contract address on Base Sepolia: `________` → `https://sepolia.basescan.org/address/<address>`
-- Tx #1 (Authorize issuer): `________` → `https://sepolia.basescan.org/tx/<hash>`
-- Tx #2 (Issue CERT-2026-SYN-001): `________` → `https://sepolia.basescan.org/tx/<hash>`
-- Optional Tx #3 (Correction v2), plus a reverted unauthorized attempt
+- Repository: https://github.com/AarushMalik316/PaperSeal
+- Contract address: `0x15D43F62e4ce562C5c138C08c3e8261922B6Ae7f` → https://sepolia.basescan.org/address/0x15D43F62e4ce562C5c138C08c3e8261922B6Ae7f
+- Tx #1 (Admin authorizes issuer wallet): `0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb` → https://sepolia.basescan.org/tx/0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb
+- Tx #2 (Issuer registers CERT-2026-SYN-001): `0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904` → https://sepolia.basescan.org/tx/0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904
 
 ## Path to real life.
 
