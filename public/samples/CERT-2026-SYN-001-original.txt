@@ -1,0 +1,6 @@
+PaperSeal synthetic certificate (fictional data, for demo use only)
+Certificate ID: CERT-2026-SYN-001
+Institution: Northbridge Technical Institute
+Credential: B.Sc. Distributed Systems
+Holder reference: Synthetic Learner S-001
+Awarded: 2026-06-30

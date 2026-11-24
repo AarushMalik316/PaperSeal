@@ -1,0 +1,2 @@
+# Sample certificate files are hashed byte-for-byte — never rewrite line endings.
+public/samples/* -text

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="PaperSeal — verify educational certificates on Base Sepolia. Contract-enforced issuers, append-only corrections, zero personal data on-chain." />
+    <meta name="theme-color" content="#0d0f13" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+    <title>PaperSeal · Certificate Clearance on Base Sepolia</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0d0f13; color: #eef1f6; overflow: hidden; touch-action: manipulation; }
+      #boot-fallback { display: none; position: fixed; inset: 0; z-index: 100; place-items: center; background: #0d0f13; font-family: "Space Grotesk", system-ui, sans-serif; text-align: center; padding: 24px; }
+      #boot-fallback.on { display: grid; }
+      #boot-fallback p { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: .12em; color: #8f98a8; }
+      #boot-fallback button { margin-top: 18px; font: 600 15px "Space Grotesk", system-ui, sans-serif; background: #f59e0b; color: #0d0f13; border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; }
+    </style>
+    <!-- Classic-script watchdog: runs before the module bundle. -->
+    <script>
+      (function () {
+        try {
+          var c = document.createElement("canvas");
+          window.__PS_WEBGL = !!(window.WebGLRenderingContext && (c.getContext("webgl2") || c.getContext("webgl")));
+        } catch (e) {
+          window.__PS_WEBGL = false;
+        }
+        window.setTimeout(function () {
+          if (!window.__PS_BOOTED) {
+            var el = document.getElementById("boot-fallback");
+            if (el) el.className = "on";
+          }
+        }, 10000);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <div id="boot-fallback" role="alert">
+      <div>
+        <div style="font-size: 40px; font-weight: 600; letter-spacing: -0.04em">PaperSeal</div>
+        <p>CLEARANCE GATE · THE APP IS TAKING LONGER THAN EXPECTED TO START</p>
+        <p>Check that JavaScript is enabled, then reload. Public verification needs no wallet.</p>
+        <button type="button" onclick="location.reload()">Reload</button>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
