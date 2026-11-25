@@ -41,10 +41,12 @@ export function FileDropzone({ onFile, label = "Choose or drop a certificate fil
         id={id}
         type="file"
         className="sr-only"
+        onClick={(e) => {
+          e.currentTarget.value = "";
+        }}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) onFile(file);
-          e.target.value = "";
         }}
       />
     </label>

@@ -2,21 +2,23 @@
 // rule and verdict, plus the project overview and the spreadsheet comparison.
 import { X, ArrowRight, ShieldCheck, ShieldX } from "lucide-react";
 import { useApp } from "../state/AppContext";
-import { ZONES, VERDICT_TEXT, SUBJECT_ID } from "./zones";
+import { ZONES, VERDICT_TEXT, SUBJECT_ID, resolveZoneVerdicts, describeWalletRole, getZoneLiveNote } from "./zones";
 import { PROJECT_OVERVIEW, COMPARISON } from "./copy";
 import { NETWORK_LABEL } from "../lib/config";
+import { shortHex } from "../lib/format";
 
 export function AccessMatrix({ onClose, onSelect }: { onClose: () => void; onSelect: (i: number) => void }) {
   const { activeZone, health, wallet, roles } = useApp();
-  const live = health.status === "ok" && Boolean(wallet.account);
-
-  const liveFor = (i: number): string | null => {
-    if (!live || roles.loading) return null;
-    if (i === 0) return roles.isAdmin ? "Your wallet: admin() ✓" : "Your wallet: not admin";
-    if (i === 1 || i === 5) return roles.isIssuer ? "Your wallet: authorized ✓" : "Your wallet: not authorized";
-    if (i === 3) return roles.isIssuer ? "Your wallet is authorized" : "Your wallet would be refused";
-    return null;
+  const accessCtx = {
+    connected: Boolean(wallet.account),
+    contractReady: health.status === "ok",
+    loading: roles.loading,
+    isAdmin: roles.isAdmin,
+    isIssuer: roles.isIssuer,
   };
+  const verdicts = resolveZoneVerdicts(accessCtx);
+  const roleLabel = describeWalletRole(accessCtx);
+  const accountHex = wallet.account ? shortHex(wallet.account) : null;
 
   return (
     <aside
@@ -35,13 +37,17 @@ export function AccessMatrix({ onClose, onSelect }: { onClose: () => void; onSel
         </button>
       </div>
       <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="mb-3 rounded-[8px] border border-line bg-obsidian/80 px-3 py-2 font-mono text-[11px] text-amber">
+          ACTIVE CLEARANCE · {roleLabel}
+        </div>
         <p className="mb-3 text-[13px] text-muted">
-          Subject <span className="font-mono text-ink">{SUBJECT_ID}</span>. Each zone is a rule written into CertificateRegistry.sol. Verdicts describe the contract&apos;s rules; live results come from the consoles.
+          Subject <span className="font-mono text-ink">{SUBJECT_ID}</span>. Verdicts update live with your connected wallet: public users can read Zone 03, admins unlock Zone 01, authorized issuers unlock Zones 02, 04 and 06, and Zone 05 is sealed for everyone.
         </p>
         <ul className="flex flex-col gap-2">
           {ZONES.map((z) => {
-            const ok = z.verdict === "granted";
-            const lf = liveFor(z.index);
+            const verdict = verdicts[z.index];
+            const ok = verdict === "granted";
+            const lf = getZoneLiveNote(z.index, accessCtx, accountHex);
             return (
               <li key={z.code}>
                 <button
@@ -58,12 +64,12 @@ export function AccessMatrix({ onClose, onSelect }: { onClose: () => void; onSel
                       {z.fn}
                       {z.error ? ` → ${z.error}()` : ""}
                     </span>
-                    {lf && <span className="mt-0.5 block font-mono text-[11px] text-amber">{lf}</span>}
+                    <span className="mt-0.5 block font-mono text-[11px] text-amber">{lf}</span>
                   </span>
                   <span className={`inline-flex items-center gap-1.5 rounded-[6px] px-2 py-1 font-mono text-[10.5px] font-semibold ${ok ? "glow-go text-go" : "glow-stop text-stop"}`}>
                     {ok ? <ShieldCheck size={13} aria-hidden="true" /> : <ShieldX size={13} aria-hidden="true" />}
                     {ok ? "GRANTED" : "DENIED"}
-                    <span className="sr-only">{VERDICT_TEXT[z.verdict]}</span>
+                    <span className="sr-only">{VERDICT_TEXT[verdict]}</span>
                   </span>
                 </button>
               </li>

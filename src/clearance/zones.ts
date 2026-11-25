@@ -73,15 +73,15 @@ export const ZONES: Zone[] = [
   {
     index: 3,
     code: "04",
-    name: "Unauthorized Write",
+    name: "Write Authorization",
     verdict: "denied",
-    clearance: "Authorized Issuer — wallet not on list",
+    clearance: "Authorized Issuer — onlyAuthorizedIssuer",
     tier: "RESTRICTED · ISSUER ONLY",
     fn: "issueCertificate / correctCertificate",
     error: "NotAuthorizedIssuer",
-    note: "A wallet the admin never authorized, or later removed, tries to issue or correct a certificate. The EVM reverts with NotAuthorizedIssuer(caller) and nothing is written. The refusal comes from the contract, not the page.",
+    note: "Writing requires an authorized issuer wallet. An unauthorized or revoked wallet trying to issue or correct a certificate is refused by the EVM with NotAuthorizedIssuer(caller) — enforced by the contract, not the page.",
     view: "issuer",
-    cta: "Open unauthorized-action demo",
+    cta: "Open write-gate demo",
     hero: "Registry Core",
   },
   {
@@ -119,3 +119,73 @@ export const VERDICT_TEXT: Record<Verdict, string> = {
 };
 
 export const mod6 = (n: number) => ((n % 6) + 6) % 6;
+
+export interface ClearanceAccessContext {
+  connected: boolean;
+  contractReady: boolean;
+  loading?: boolean;
+  isAdmin: boolean;
+  isIssuer: boolean;
+}
+
+/**
+ * Resolve live per-wallet access across all 6 zones:
+ * - Public / no wallet: Zone 03 (Public Verification) only
+ * - Admin wallet: Zone 01 (Issuer Authorization) + Zone 03 (Public Verification)
+ * - Authorized Issuer wallet: Zones 02, 03, 04, 06 (Zone 05 remains sealed for everyone)
+ * - Admin + Authorized Issuer: Zones 01, 02, 03, 04, 06 (Zone 05 remains sealed)
+ */
+export function resolveZoneVerdict(zoneIndex: number, ctx: ClearanceAccessContext): Verdict {
+  const verified = ctx.connected && ctx.contractReady && !ctx.loading;
+  const adminOk = verified && ctx.isAdmin;
+  const issuerOk = verified && ctx.isIssuer;
+
+  switch (mod6(zoneIndex)) {
+    case 0:
+      return adminOk ? "granted" : "denied";
+    case 1:
+      return issuerOk ? "granted" : "denied";
+    case 2:
+      return "granted";
+    case 3:
+      return issuerOk ? "granted" : "denied";
+    case 4:
+      return "denied";
+    case 5:
+      return issuerOk ? "granted" : "denied";
+    default:
+      return "denied";
+  }
+}
+
+export function resolveZoneVerdicts(ctx: ClearanceAccessContext): Verdict[] {
+  return ZONES.map((z) => resolveZoneVerdict(z.index, ctx));
+}
+
+export function describeWalletRole(ctx: ClearanceAccessContext): string {
+  if (!ctx.connected) return "PUBLIC USER · NO WALLET (READ & VERIFY ONLY)";
+  if (!ctx.contractReady) return "READ-ONLY PREVIEW · NO LIVE CONTRACT";
+  if (ctx.loading) return "CHECKING ON-CHAIN ROLE…";
+  if (ctx.isAdmin && ctx.isIssuer) return "INSTITUTION ADMIN + AUTHORIZED ISSUER";
+  if (ctx.isAdmin) return "INSTITUTION ADMIN · ADMIN ACCESS";
+  if (ctx.isIssuer) return "AUTHORIZED ISSUER · ISSUER ACCESS";
+  return "PUBLIC WALLET · READ & VERIFY ONLY";
+}
+
+export function getZoneLiveNote(zoneIndex: number, ctx: ClearanceAccessContext, accountHex: string | null): string {
+  const idx = mod6(zoneIndex);
+  if (idx === 2) return "Open to everyone — no wallet needed to verify certificates.";
+  if (idx === 4) return "Sealed for all wallets (including Admin and Issuers): v1 can never be overwritten.";
+  if (!ctx.connected || !accountHex) return "No wallet connected — public users can only read and verify (Zone 03).";
+  if (!ctx.contractReady) return "No live contract configured — showing read-only public access (Zone 03 only).";
+  if (ctx.loading) return "Reading your wallet role from the contract…";
+  if (idx === 0) {
+    return ctx.isAdmin
+      ? `Wallet ${accountHex} matches admin() — admin access granted.`
+      : `Wallet ${accountHex} is not admin() — contract refuses with NotAdmin().`;
+  }
+  return ctx.isIssuer
+    ? `Wallet ${accountHex} is an authorized issuer — issuer write access granted.`
+    : `Wallet ${accountHex} is not an authorized issuer — contract refuses with NotAuthorizedIssuer().`;
+}
+

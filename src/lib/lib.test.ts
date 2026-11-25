@@ -1,8 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { AbiCoder, Interface, id, keccak256, toUtf8Bytes } from "ethers";
 import { readFileSync } from "node:fs";
 import { certIdHash, isValidCertId, normalizeCertId } from "../../shared/canonical.js";
-import { normalizeBytes32, sha256Hex } from "./hash";
+import { hashFile, normalizeBytes32, sha256Hex } from "./hash";
 import { deriveVerdict, matchFile, VERDICT_LABELS } from "./verdict";
 import { decodeError, findRevertData } from "./errors";
 import { REGISTRY_ABI, type VersionRecord } from "./registry";
@@ -45,6 +45,16 @@ describe("local SHA-256", () => {
   it("normalises 32-byte hex input", () => {
     expect(normalizeBytes32("AB".repeat(32))).toBe("0x" + "ab".repeat(32));
     expect(normalizeBytes32("0x1234")).toBeNull();
+  });
+  it("falls back to pure-JS SHA-256 when crypto.subtle is unavailable", async () => {
+    const original = readFileSync("public/samples/CERT-2026-SYN-001-original.txt");
+    const spy = vi.spyOn(globalThis.crypto, "subtle", "get").mockReturnValue(undefined as unknown as SubtleCrypto);
+    try {
+      const hex = await hashFile(new Blob([original]));
+      expect(hex).toBe("0x7fa7323de814dab18cd55526122a60d414a8181272272b22997082d151f2512e");
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 

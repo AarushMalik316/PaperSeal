@@ -5,7 +5,7 @@
   "description": "PaperSeal — blockchain-based educational certificate verification on Base Sepolia (HASH-IT-OUT 2026, Track 1: Digital Identity)",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host 0.0.0.0 --port 3000",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty",

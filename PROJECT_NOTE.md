@@ -37,9 +37,9 @@ Nothing is ever edited or deleted. A correction marks the previous version Super
 
 ## How to run the demo.
 
-1. `npm install`, `cp .env.example .env`, then `npm run dev` and open http://localhost:5173.
+1. `npm install`, `cp .env.example .env`, then `npm run dev` and open http://localhost:3000.
 2. Deploy the contract: **Setup → Deploy with MetaMask** (no private keys needed), or use Remix. Put `VITE_CONTRACT_ADDRESS` and `VITE_DEPLOY_BLOCK` in `.env` and restart. The banner must read **Connected · Base Sepolia (84532)**.
-3. Click **Authenticate & Enter** on the security gate. The Clearance carousel shows the six contract rules as zones (four granted, two denied). Then open **Judge Demo** (top right): it runs a live readiness check and walks through the 8 beats below.
+3. Click **Authenticate & Enter** on the security gate. The Clearance carousel shows the six contract rules as zones that update dynamically for your connected wallet role. Then open **Judge Demo** (top right): it runs a live readiness check and walks through the 8 beats below.
 
 **5-minute presenter script**
 

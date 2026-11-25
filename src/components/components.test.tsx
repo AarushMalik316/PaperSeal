@@ -1,8 +1,9 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { Markdown } from "./Markdown";
 import { ProofReceipt } from "./ProofReceipt";
+import { CopyButton } from "./ui";
 
 const HEADINGS = [
   "The user and their one task.",
@@ -41,5 +42,30 @@ describe("ProofReceipt", () => {
     expect(screen.getByText("v1")).toBeInTheDocument();
     expect(screen.getByText("Base Sepolia · 84532")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /View on BaseScan/ })).toHaveAttribute("href", `https://sepolia.basescan.org/tx/0x${"ab".repeat(32)}`);
+  });
+});
+
+describe("CopyButton", () => {
+  it("falls back to execCommand when navigator.clipboard rejects", async () => {
+    const writeMock = vi.fn().mockRejectedValue(new Error("Clipboard blocked"));
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: writeMock }, configurable: true });
+    document.execCommand = vi.fn().mockReturnValue(true);
+
+    render(<CopyButton value="PaperSeal receipt text" label="Copy receipt" />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy receipt" }));
+
+    await waitFor(() => expect(screen.getByRole("button")).toHaveTextContent("Copied"));
+    expect(document.execCommand).toHaveBeenCalledWith("copy");
+  });
+
+  it("shows a selectable textarea if all clipboard APIs fail", async () => {
+    const writeMock = vi.fn().mockRejectedValue(new Error("Clipboard blocked"));
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: writeMock }, configurable: true });
+    document.execCommand = vi.fn().mockReturnValue(false);
+
+    render(<CopyButton value="PaperSeal receipt text" label="Copy receipt" />);
+    fireEvent.click(screen.getByRole("button", { name: "Copy receipt" }));
+
+    await waitFor(() => expect(screen.getByLabelText("Manual copy text")).toHaveValue("PaperSeal receipt text"));
   });
 });

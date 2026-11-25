@@ -1,5 +1,6 @@
 import { useState, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { AlertTriangle, Check, CircleHelp, Copy, ExternalLink as ExternalIcon, XCircle, CheckCircle2, Loader2 } from "lucide-react";
+import { copyText } from "../lib/clipboard";
 
 export type Tone = "ok" | "warn" | "bad" | "neutral" | "info";
 
@@ -71,26 +72,34 @@ export function Spinner({ label }: { label?: string }) {
 }
 
 export function CopyButton({ value, label = "Copy" }: { value: string; label?: string }) {
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   return (
-    <button
-      type="button"
-      className="inline-flex shrink-0 items-center gap-1 rounded-[10px] border border-edge bg-panel px-2 py-1 text-xs font-semibold hover:bg-obsidian"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(value);
-          setCopied(true);
-          window.setTimeout(() => setCopied(false), 1400);
-        } catch {
-          /* clipboard unavailable */
-        }
-      }}
-      aria-label={label}
-      title={value.length > 120 ? undefined : value}
-    >
-      {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
-      {copied ? "Copied" : label}
-    </button>
+    <span className="inline-flex flex-col items-end gap-1">
+      <button
+        type="button"
+        className="inline-flex shrink-0 items-center gap-1 rounded-[10px] border border-edge bg-panel px-2 py-1 text-xs font-semibold hover:bg-obsidian"
+        onClick={async () => {
+          const ok = await copyText(value);
+          setStatus(ok ? "copied" : "failed");
+          window.setTimeout(() => setStatus("idle"), ok ? 1400 : 4000);
+        }}
+        aria-label={label}
+        title={value.length > 120 ? undefined : value}
+      >
+        {status === "copied" ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}
+        {status === "copied" ? "Copied" : status === "failed" ? "Select & copy" : label}
+      </button>
+      {status === "failed" && (
+        <textarea
+          readOnly
+          aria-label="Manual copy text"
+          value={value}
+          onFocus={(e) => e.currentTarget.select()}
+          rows={Math.min(4, value.split("\n").length)}
+          className="w-64 rounded-[6px] border border-edge bg-obsidian p-1.5 font-mono text-[11px] text-ink"
+        />
+      )}
+    </span>
   );
 }
 

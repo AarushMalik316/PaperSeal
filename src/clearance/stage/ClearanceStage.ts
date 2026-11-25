@@ -8,7 +8,7 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { GTAOPass } from "three/examples/jsm/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
-import { ZONES, mod6 } from "../zones";
+import { ZONES, mod6, type Verdict } from "../zones";
 import { BUILDERS, box, cyl, makeKit, type Kit } from "./dioramas";
 import { BadgeTexture, acousticPanel, bayNumber, engravedRing } from "./textures";
 import { buildSubject, type Subject } from "./subject";
@@ -24,6 +24,7 @@ export interface StageOptions {
   reducedMotion: boolean;
   /** Aperture radius (px) and vertical centre (fraction of viewport height) for the gate view. */
   aperture: () => { radius: number; y: number };
+  initialVerdicts?: Verdict[];
 }
 
 const BAY = Math.PI / 3;
@@ -38,11 +39,14 @@ const ZOOMS = [1.3, 1.0, 0.74];
 
 interface BayRig {
   group: THREE.Group;
+  num: THREE.Mesh;
+  pad: THREE.Group;
   ring: THREE.MeshStandardMaterial;
   scanRing: THREE.Mesh;
   lightbar: THREE.MeshStandardMaterial;
-  barrier?: THREE.MeshBasicMaterial;
-  lasers?: THREE.MeshStandardMaterial;
+  barrierGroup: THREE.Group;
+  barrier: THREE.MeshBasicMaterial;
+  lasers: THREE.MeshStandardMaterial;
   verdictColor: THREE.Color;
 }
 
@@ -104,12 +108,17 @@ export class ClearanceStage {
   private hovered: THREE.Object3D | null = null;
   private pointerDirty = false;
   private clientPt = { x: 0, y: 0 };
+  private verdicts: Verdict[] = ["denied", "denied", "granted", "denied", "denied", "denied"];
 
   constructor(
     private host: HTMLElement,
     private cb: StageCallbacks,
     private opts: StageOptions,
-  ) {}
+  ) {
+    if (opts.initialVerdicts?.length === 6) {
+      this.verdicts = [...opts.initialVerdicts];
+    }
+  }
 
   // ---------------------------------------------------------------- setup
   async init(): Promise<void> {
@@ -227,7 +236,7 @@ export class ClearanceStage {
       const g = new THREE.Group();
       g.rotation.y = i * BAY;
       this.carousel.add(g);
-      const denied = zone.verdict === "denied";
+      const denied = this.verdicts[i] === "denied";
       const verdictColor = denied ? RED : GREEN;
 
       // floor sector + engraved bay number
@@ -286,27 +295,25 @@ export class ClearanceStage {
       g.add(lb);
       this.interactive.push(lb);
 
-      const rig: BayRig = { group: g, ring, scanRing, lightbar, verdictColor };
-      if (denied) {
-        const barrier = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-        const lasers = new THREE.MeshStandardMaterial({ color: 0x050607, emissive: RED, emissiveIntensity: 0, transparent: true });
-        const bg = new THREE.Group();
-        bg.userData = { label: "Security Barrier", bay: i, baseY: 0, hoverT: 0 };
-        const plane = new THREE.Mesh(new THREE.PlaneGeometry(half * 2 - 0.1, 2.4), barrier);
-        plane.position.y = 1.2;
-        bg.add(plane);
-        for (const y of [0.35, 0.8, 1.25, 1.7]) {
-          const l = new THREE.Mesh(new THREE.BoxGeometry(half * 2 - 0.1, 0.012, 0.012), lasers);
-          l.position.y = y;
-          bg.add(l);
-        }
-        bg.position.z = THRESHOLD - 0.02;
-        g.add(bg);
-        this.interactive.push(bg);
-        rig.barrier = barrier;
-        rig.lasers = lasers;
+      // build barrier on every bay so any bay can dynamically lock or unlock per wallet role
+      const barrier = new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+      const lasers = new THREE.MeshStandardMaterial({ color: 0x050607, emissive: RED, emissiveIntensity: 0, transparent: true, opacity: 0 });
+      const barrierGroup = new THREE.Group();
+      barrierGroup.userData = { label: "Security Barrier", bay: i, baseY: 0, hoverT: 0 };
+      barrierGroup.visible = denied;
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(half * 2 - 0.1, 2.4), barrier);
+      plane.position.y = 1.2;
+      barrierGroup.add(plane);
+      for (const y of [0.35, 0.8, 1.25, 1.7]) {
+        const l = new THREE.Mesh(new THREE.BoxGeometry(half * 2 - 0.1, 0.012, 0.012), lasers);
+        l.position.y = y;
+        barrierGroup.add(l);
       }
-      this.bays.push(rig);
+      barrierGroup.position.z = THRESHOLD - 0.02;
+      g.add(barrierGroup);
+      this.interactive.push(barrierGroup);
+
+      this.bays.push({ group: g, num, pad, ring, scanRing, lightbar, barrierGroup, barrier, lasers, verdictColor });
     });
   }
 
@@ -390,6 +397,35 @@ export class ClearanceStage {
 
   setBadge(id: string, status: string, color: string) {
     this.badge.draw(id, status, color);
+  }
+
+  setVerdicts(verdicts: Verdict[]) {
+    if (verdicts.length !== 6) return;
+    const prevActive = this.verdicts[this.activeBay];
+    let changed = false;
+    for (let i = 0; i < 6; i++) {
+      if (this.verdicts[i] !== verdicts[i]) changed = true;
+    }
+    if (!changed && this.bays.length === 6) return;
+    this.verdicts = [...verdicts];
+    this.bays.forEach((b, i) => {
+      const isDenied = this.verdicts[i] === "denied";
+      b.verdictColor = isDenied ? RED : GREEN;
+      b.pad.position.z = isDenied ? PAD_OUT : PAD_IN;
+      b.num.position.z = isDenied ? 4.25 : 5.25;
+      if (isDenied) {
+        b.barrierGroup.visible = true;
+      } else if (this.opts.reducedMotion) {
+        b.barrier.opacity = 0;
+        b.lasers.opacity = 0;
+        b.lasers.emissiveIntensity = 0;
+        b.barrierGroup.visible = false;
+      }
+    });
+    if (this.mode === "bay" && prevActive !== this.verdicts[this.activeBay]) {
+      this.stepT = this.opts.reducedMotion ? 1 : 0;
+      this.scanT = this.opts.reducedMotion ? 1 : 0;
+    }
   }
 
   dispose() {
@@ -515,7 +551,7 @@ export class ClearanceStage {
       let o: THREE.Object3D | null = h.object;
       while (o && !o.userData.label) o = o.parent;
       if (o) {
-        if (o.userData.label === "Security Barrier" && this.bays[o.userData.bay]?.barrier?.opacity === 0) continue;
+        if (o.userData.label === "Security Barrier" && (!o.visible || this.bays[o.userData.bay]?.barrier.opacity === 0)) continue;
         return o;
       }
     }
@@ -591,8 +627,7 @@ export class ClearanceStage {
     this.applyCamera(this.mode === "aperture" ? 0 : easeInOutCubic(this.dollyT));
 
     // --- subject: spring toward the verdict position, with a step hop
-    const zone = ZONES[this.activeBay];
-    const denied = zone.verdict === "denied";
+    const denied = this.verdicts[this.activeBay] === "denied";
     const zTarget = this.mode === "aperture" ? PAD_IN : denied ? PAD_OUT : PAD_IN;
     if (rm) {
       this.subjZ = zTarget;
@@ -631,7 +666,7 @@ export class ClearanceStage {
     const pulse = rm ? 0.6 : 0.5 + 0.5 * Math.sin(this.time * 6.5);
     this.bays.forEach((b, i) => {
       const active = i === this.activeBay && this.mode !== "aperture";
-      const isDenied = ZONES[i].verdict === "denied";
+      const isDenied = this.verdicts[i] === "denied";
       if (active && scanning) {
         b.ring.emissive.copy(AMBER);
         b.ring.emissiveIntensity = 1.6 + (rm ? 0 : Math.random() * 0.8);
@@ -645,14 +680,13 @@ export class ClearanceStage {
         b.lightbar.emissiveIntensity = active ? ai + 0.4 : 0.18;
       }
       b.scanRing.rotation.z += dt * (active ? (scanning ? 9 : 1.2) : 0.3) * (rm ? 0 : 1);
-      if (b.barrier && b.lasers) {
-        const on = active && !scanning ? 1 : 0;
-        const targetOpacity = on * (0.045 + 0.04 * pulse);
-        b.barrier.opacity += (targetOpacity - b.barrier.opacity) * damp(8, dt);
-        if (b.barrier.opacity < 0.002) b.barrier.opacity = 0;
-        b.lasers.emissiveIntensity = on * (1.6 + 1.6 * pulse);
-        b.lasers.opacity = on ? 1 : 0;
-      }
+      const on = active && isDenied && !scanning ? 1 : 0;
+      const targetOpacity = on * (0.045 + 0.04 * pulse);
+      b.barrier.opacity += (targetOpacity - b.barrier.opacity) * damp(8, dt);
+      if (b.barrier.opacity < 0.002) b.barrier.opacity = 0;
+      b.lasers.emissiveIntensity = on * (1.6 + 1.6 * pulse);
+      b.lasers.opacity = on ? 1 : 0;
+      b.barrierGroup.visible = on === 1 || b.barrier.opacity > 0;
     });
     const vc = scanning ? AMBER : denied ? RED : GREEN;
     this.verdictLight.color.lerp(vc, damp(8, dt));

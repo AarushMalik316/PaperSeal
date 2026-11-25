@@ -1,13 +1,13 @@
 // Home experience: full-bleed 3D Clearance carousel behind a security gate,
 // with HUD chrome. The 3D engine is loaded lazily the first time Home shows.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import { useApp } from "../state/AppContext";
 import { Gate, type GateProgress } from "./Gate";
 import { FallbackStage } from "./FallbackStage";
 import { AccessMatrix } from "./AccessMatrix";
 import { Dossier } from "./Dossier";
-import { ZONES, SUBJECT_ID, VERDICT_TEXT, mod6 } from "./zones";
+import { ZONES, SUBJECT_ID, VERDICT_TEXT, mod6, resolveZoneVerdicts, describeWalletRole, type Verdict } from "./zones";
 import type { ClearanceStage } from "./stage/ClearanceStage";
 
 declare global {
@@ -34,7 +34,7 @@ function aperture() {
 }
 
 export function ClearanceView({ active }: { active: boolean }) {
-  const { entered, setEntered, matrixOpen, setMatrixOpen, activeZone, setActiveZone, drawer, activePass } = useApp();
+  const { entered, setEntered, matrixOpen, setMatrixOpen, activeZone, setActiveZone, drawer, activePass, wallet, health, roles } = useApp();
   const hostRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<ClearanceStage | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -48,6 +48,21 @@ export function ClearanceView({ active }: { active: boolean }) {
   const reduced = useRef(typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const enteredRef = useRef(entered);
   enteredRef.current = entered;
+
+  const accessCtx = useMemo(
+    () => ({
+      connected: Boolean(wallet.account),
+      contractReady: health.status === "ok",
+      loading: roles.loading,
+      isAdmin: roles.isAdmin,
+      isIssuer: roles.isIssuer,
+    }),
+    [wallet.account, health.status, roles.loading, roles.isAdmin, roles.isIssuer],
+  );
+  const verdicts = useMemo(() => resolveZoneVerdicts(accessCtx), [accessCtx]);
+  const roleLabel = useMemo(() => describeWalletRole(accessCtx), [accessCtx]);
+  const verdictsRef = useRef<Verdict[]>(verdicts);
+  verdictsRef.current = verdicts;
 
   const dismissHint = useCallback(() => {
     setHintGone(true);
@@ -96,11 +111,12 @@ export function ClearanceView({ active }: { active: boolean }) {
             },
             onSelect: (zone, label) => setDossier({ zone, label }),
           },
-          { reducedMotion: Boolean(reduced.current), aperture },
+          { reducedMotion: Boolean(reduced.current), aperture, initialVerdicts: verdictsRef.current },
         );
         stageRef.current = stage;
         await stage.init();
         if (!mounted.current) return;
+        stage.setVerdicts(verdictsRef.current);
         if (enteredRef.current) stage.enter(true);
         window.clearTimeout(watchdog);
         setStageState("ready");
@@ -121,12 +137,17 @@ export function ClearanceView({ active }: { active: boolean }) {
     stageRef.current?.setZoom(zoom);
   }, [zoom, stageState]);
 
+  // sync 3D carousel barriers, pads, lights, and subject pose whenever wallet/role verdicts change
+  useEffect(() => {
+    stageRef.current?.setVerdicts(verdicts);
+  }, [verdicts, stageState]);
+
   // badge on the 3D subject follows the active zone (and a live lookup, if any)
   useEffect(() => {
-    const z = ZONES[activeZone];
+    const v = verdicts[activeZone];
     const id = activePass?.source === "live" ? activePass.certId : SUBJECT_ID;
-    stageRef.current?.setBadge(id, VERDICT_TEXT[z.verdict], z.verdict === "granted" ? "#10b981" : "#ef4444");
-  }, [activeZone, activePass, stageState]);
+    stageRef.current?.setBadge(id, VERDICT_TEXT[v], v === "granted" ? "#10b981" : "#ef4444");
+  }, [activeZone, verdicts, activePass, stageState]);
 
   const go = useCallback(
     (i: number) => {
@@ -167,7 +188,8 @@ export function ClearanceView({ active }: { active: boolean }) {
 
   const showFallback = stageState === "failed" || (slow && stageState !== "ready" && entered);
   const zone = ZONES[activeZone];
-  const ok = zone.verdict === "granted";
+  const verdict = verdicts[activeZone];
+  const ok = verdict === "granted";
 
   return (
     <>
@@ -178,7 +200,7 @@ export function ClearanceView({ active }: { active: boolean }) {
         className={`stage-host ${matrixOpen && active ? "is-overview" : ""}`}
         style={{ visibility: active ? "visible" : "hidden", zIndex: 0 }}
       >
-        {showFallback && <FallbackStage active={activeZone} onSelect={(i) => { go(i); setDossier({ zone: i, label: ZONES[i].hero }); }} />}
+        {showFallback && <FallbackStage active={activeZone} verdicts={verdicts} onSelect={(i) => { go(i); setDossier({ zone: i, label: ZONES[i].hero }); }} />}
       </section>
 
       {active && !entered && (
@@ -194,7 +216,7 @@ export function ClearanceView({ active }: { active: boolean }) {
       {active && entered && (
         <>
           <p className="sr-only" aria-live="polite">
-            Zone {zone.code}, {zone.name}: {VERDICT_TEXT[zone.verdict]}.
+            Zone {zone.code}, {zone.name}: {VERDICT_TEXT[verdict]}. Active role: {roleLabel}.
           </p>
 
           {/* top-centre live clearance pill */}
@@ -204,33 +226,39 @@ export function ClearanceView({ active }: { active: boolean }) {
                 <span className={`absolute inset-0 animate-ping rounded-full motion-reduce:hidden ${ok ? "bg-go" : "bg-stop"} opacity-60`} />
               </span>
               <span>
-                ZONE {zone.code} · <span className={ok ? "text-go" : "text-stop"}>{VERDICT_TEXT[zone.verdict]}</span>
+                ZONE {zone.code} · <span className={ok ? "text-go" : "text-stop"}>{VERDICT_TEXT[verdict]}</span>
               </span>
             </div>
           </div>
 
           {/* bottom-left: zone tabs + readout */}
           <nav aria-label="Zones" className="hud-fade fixed bottom-6 left-6 z-[45] max-[760px]:bottom-4 max-[760px]:left-4 max-[760px]:right-4">
+            <p className="mb-1 hidden font-mono text-[11px] tracking-[0.12em] text-amber sm:block">
+              YOUR ROLE · {roleLabel}
+            </p>
             <p className="mb-2 hidden font-mono text-[11px] tracking-[0.12em] text-muted sm:block">
-              {zone.tier} · CLEARANCE: {zone.clearance.toUpperCase()}
+              {zone.tier} · REQUIRED: {zone.clearance.toUpperCase()}
             </p>
             <p className="mb-2.5 text-[22px] font-semibold leading-tight tracking-tight max-[760px]:text-[17px]">
               <span className="font-mono text-amber">{zone.code}</span> {zone.name}
             </p>
             <div className="flex gap-1.5">
-              {ZONES.map((z) => (
-                <button
-                  key={z.code}
-                  type="button"
-                  onClick={() => go(z.index)}
-                  aria-current={activeZone === z.index ? "true" : undefined}
-                  aria-label={`Zone ${z.code}, ${z.name}, ${VERDICT_TEXT[z.verdict]}`}
-                  className={`flex h-10 min-w-[52px] items-center justify-center gap-1.5 rounded-[8px] border px-2.5 font-mono text-[13px] font-semibold transition-colors max-[400px]:min-w-0 max-[400px]:flex-1 ${activeZone === z.index ? "border-amber bg-amber/10 text-ink" : "border-edge bg-obsidian/80 text-ink/75 hover:border-muted"}`}
-                >
-                  <span className={`h-1.5 w-1.5 rounded-full ${z.verdict === "granted" ? "bg-go" : "bg-stop"}`} aria-hidden="true" />
-                  {z.code}
-                </button>
-              ))}
+              {ZONES.map((z) => {
+                const zv = verdicts[z.index];
+                return (
+                  <button
+                    key={z.code}
+                    type="button"
+                    onClick={() => go(z.index)}
+                    aria-current={activeZone === z.index ? "true" : undefined}
+                    aria-label={`Zone ${z.code}, ${z.name}, ${VERDICT_TEXT[zv]}`}
+                    className={`flex h-10 min-w-[52px] items-center justify-center gap-1.5 rounded-[8px] border px-2.5 font-mono text-[13px] font-semibold transition-colors max-[400px]:min-w-0 max-[400px]:flex-1 ${activeZone === z.index ? "border-amber bg-amber/10 text-ink" : "border-edge bg-obsidian/80 text-ink/75 hover:border-muted"}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${zv === "granted" ? "bg-go" : "bg-stop"}`} aria-hidden="true" />
+                    {z.code}
+                  </button>
+                );
+              })}
             </div>
           </nav>
 

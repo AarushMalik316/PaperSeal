@@ -2,13 +2,21 @@
 import { useEffect, useRef } from "react";
 import { ArrowRight, ShieldCheck, ShieldX, X } from "lucide-react";
 import { useApp } from "../state/AppContext";
-import { ZONES, SUBJECT_ID, VERDICT_TEXT } from "./zones";
+import { ZONES, SUBJECT_ID, VERDICT_TEXT, resolveZoneVerdict, getZoneLiveNote, describeWalletRole } from "./zones";
 import { shortHex } from "../lib/format";
 
 export function Dossier({ zoneIndex, inspected, onClose }: { zoneIndex: number; inspected: string; onClose: () => void }) {
   const { navigate, health, wallet, roles, activePass } = useApp();
   const zone = ZONES[zoneIndex];
-  const ok = zone.verdict === "granted";
+  const accessCtx = {
+    connected: Boolean(wallet.account),
+    contractReady: health.status === "ok",
+    loading: roles.loading,
+    isAdmin: roles.isAdmin,
+    isIssuer: roles.isIssuer,
+  };
+  const verdict = resolveZoneVerdict(zoneIndex, accessCtx);
+  const ok = verdict === "granted";
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -37,16 +45,21 @@ export function Dossier({ zoneIndex, inspected, onClose }: { zoneIndex: number; 
     };
   }, [onClose]);
 
-  // Live check against the deployed contract, only where it applies and only if really read.
-  let live: string | null = null;
-  if (health.status === "unconfigured") live = "No contract configured yet (Setup Required) — live check unavailable. The verdict above is the contract's written rule.";
-  else if (health.status !== "ok") live = "Contract not reachable — live check unavailable. The verdict above is the contract's written rule.";
-  else if (zoneIndex === 2) live = activePass?.source === "live" ? `Last lookup: ${activePass.certId} · ${activePass.statusLabel} (read from contract)` : "Open the Public Verifier to read a certificate live — no wallet needed.";
-  else if (!wallet.account) live = "Connect a wallet to see how the contract treats it here.";
-  else if (roles.loading) live = "Reading your role from the contract…";
-  else if (zoneIndex === 0) live = roles.isAdmin ? `Your wallet ${shortHex(wallet.account)} matches admin() — the contract would accept.` : `Your wallet ${shortHex(wallet.account)} is not admin() — the contract would refuse (NotAdmin).`;
-  else if (zoneIndex === 4) live = "No wallet can pass: a second v1 is refused for everyone, including authorized issuers.";
-  else live = roles.isIssuer ? `Your wallet ${shortHex(wallet.account)} is an authorized issuer.` : `Your wallet ${shortHex(wallet.account)} is not authorized — the contract would refuse (NotAuthorizedIssuer).`;
+  const accountHex = wallet.account ? shortHex(wallet.account) : null;
+  let live: string;
+  if (zoneIndex === 2 && health.status === "ok" && activePass?.source === "live") {
+    live = `Last lookup: ${activePass.certId} · ${activePass.statusLabel} (read from contract)`;
+  } else {
+    live = getZoneLiveNote(zoneIndex, accessCtx, accountHex);
+  }
+
+  const verdictSub = ok
+    ? zoneIndex === 2
+      ? "Open to everyone — no wallet needed"
+      : `Clearance verified: ${describeWalletRole(accessCtx)}`
+    : zoneIndex === 4
+      ? `Sealed for all wallets (${zone.error}())`
+      : `Requires ${zone.clearance}${zone.error ? ` (reverts with ${zone.error}())` : ""}`;
 
   return (
     <div className="fixed inset-0 z-[70] grid place-items-center bg-obsidian/70 p-4" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
@@ -69,8 +82,8 @@ export function Dossier({ zoneIndex, inspected, onClose }: { zoneIndex: number; 
         <div className={`mt-5 flex items-center gap-3 rounded-[10px] px-4 py-3.5 ${ok ? "glow-go bg-go/10" : "glow-stop bg-stop/10"}`}>
           {ok ? <ShieldCheck size={30} className="text-go" aria-hidden="true" /> : <ShieldX size={30} className="text-stop" aria-hidden="true" />}
           <div>
-            <p className={`text-[24px] font-bold tracking-[0.02em] ${ok ? "text-go" : "text-stop"}`}>{VERDICT_TEXT[zone.verdict]}</p>
-            <p className="font-mono text-[11px] text-ink/70">{zone.error ? `Contract reverts with ${zone.error}()` : "Permitted by CertificateRegistry.sol"}</p>
+            <p className={`text-[24px] font-bold tracking-[0.02em] ${ok ? "text-go" : "text-stop"}`}>{VERDICT_TEXT[verdict]}</p>
+            <p className="font-mono text-[11px] text-ink/70">{verdictSub}</p>
           </div>
         </div>
 
@@ -88,12 +101,10 @@ export function Dossier({ zoneIndex, inspected, onClose }: { zoneIndex: number; 
           ))}
         </dl>
         <p className="mt-4 text-[15px] leading-relaxed text-ink/85">{zone.note}</p>
-        {live && (
-          <p className="mt-4 rounded-[8px] border border-line bg-obsidian px-3 py-2.5 font-mono text-[12px] text-ink/85">
-            <span className="text-amber">LIVE · </span>
-            {live}
-          </p>
-        )}
+        <p className="mt-4 rounded-[8px] border border-line bg-obsidian px-3 py-2.5 font-mono text-[12px] text-ink/85">
+          <span className="text-amber">LIVE · </span>
+          {live}
+        </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"

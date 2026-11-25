@@ -205,7 +205,7 @@ if not exist .env copy .env.example .env
 npm run dev
 ```
 
-Open **http://localhost:5173** and click **Authenticate & Enter**. Leave the terminal open while you use the app; **Control/Ctrl + C** stops it.
+Open **http://localhost:3000** and click **Authenticate & Enter**. Leave the terminal open while you use the app; **Control/Ctrl + C** stops it.
 
 - `npm install` prints *deprecated* and *vulnerabilities* warnings from developer tooling. They're harmless for this demo. **Don't run `npm audit fix --force`**.
 - Without a contract address the app runs in **Unconfigured · Setup Required** mode. Every screen renders, but no certificate data is shown and nothing is presented as live.

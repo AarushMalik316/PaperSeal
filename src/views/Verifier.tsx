@@ -131,7 +131,14 @@ export function Verifier() {
         <p id="cert-id-help" className="text-sm text-muted">
           {inputError ?? "IDs are trimmed and upper-cased, then hashed with keccak256 — the plain ID never goes on-chain."}
         </p>
-        <button type="button" className="self-start text-sm font-semibold underline decoration-amber decoration-2 underline-offset-4" onClick={() => setInput(SAMPLE_CERT_ID)}>
+        <button
+          type="button"
+          className="self-start text-sm font-semibold underline decoration-amber decoration-2 underline-offset-4"
+          onClick={() => {
+            setInput(SAMPLE_CERT_ID);
+            setInputError(null);
+          }}
+        >
           Use sample ID {SAMPLE_CERT_ID}
         </button>
       </form>
@@ -143,7 +150,13 @@ export function Verifier() {
               <Spinner label={`Reading ${lookup.certId} from the contract…`} />
             </div>
           )}
-          {verdict && <VerdictCard verdict={verdict} certId={lookup.kind === "found" ? lookup.lookup.certId : "certId" in lookup ? lookup.certId : ""} />}
+          {verdict && (
+            <VerdictCard
+              verdict={verdict}
+              certId={lookup.kind === "found" ? lookup.lookup.certId : "certId" in lookup ? lookup.certId : ""}
+              contractAddress={config.address}
+            />
+          )}
           {found && <RecordDetails lookup={found} contract={config.address!} />}
 
           <TamperCheck file={file} onFile={onFile} history={found?.history ?? null} />
@@ -169,7 +182,7 @@ export function Verifier() {
   );
 }
 
-function VerdictCard({ verdict, certId }: { verdict: Verdict; certId: string }) {
+function VerdictCard({ verdict, certId, contractAddress }: { verdict: Verdict; certId: string; contractAddress: string | null }) {
   const style = VERDICT_STYLE[verdict.tone];
   return (
     <section className="paper layered p-6 sm:p-8" aria-live="polite" aria-labelledby="verdict-h">
@@ -181,6 +194,11 @@ function VerdictCard({ verdict, certId }: { verdict: Verdict; certId: string }) 
             {verdict.label}
           </h2>
           <p className="mt-2 text-[16px] text-ink/85">{verdict.detail}</p>
+          {verdict.code === "not-found" && contractAddress && (
+            <p className="mt-2 font-mono text-[12px] text-muted">
+              Checked contract {contractAddress} on {NETWORK_LABEL}.
+            </p>
+          )}
           {verdict.fileMatch && (
             <p className="mt-3">
               {verdict.fileMatch.kind === "match" ? (

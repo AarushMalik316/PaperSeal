@@ -1,8 +1,8 @@
 // Static 2D fallback when WebGL is unavailable or the 3D module is too slow.
 // A top-down radial diagram of the six bays; the active bay faces the viewer.
-import { ZONES } from "./zones";
+import { ZONES, type Verdict } from "./zones";
 
-export function FallbackStage({ active, onSelect }: { active: number; onSelect: (i: number) => void }) {
+export function FallbackStage({ active, verdicts, onSelect }: { active: number; verdicts: Verdict[]; onSelect: (i: number) => void }) {
   const R = 150;
   const wedge = (i: number) => {
     const a0 = ((i * 60 - 30 - 90) * Math.PI) / 180;
@@ -15,7 +15,8 @@ export function FallbackStage({ active, onSelect }: { active: number; onSelect: 
         <g style={{ transform: `rotate(${180 - active * 60}deg)`, transition: "transform 600ms cubic-bezier(.66,0,.22,1)" }}>
           <circle r={R + 12} fill="#161a22" stroke="#343c4a" />
           {ZONES.map((z, i) => {
-            const color = z.verdict === "granted" ? "#10b981" : "#ef4444";
+            const verdict = verdicts[i] ?? z.verdict;
+            const color = verdict === "granted" ? "#10b981" : "#ef4444";
             const a = ((i * 60 - 90) * Math.PI) / 180;
             return (
               <g key={z.code} onClick={() => onSelect(i)} style={{ cursor: "pointer" }}>
