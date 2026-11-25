@@ -55,9 +55,9 @@ Nothing is ever edited or deleted. A correction marks the previous version Super
 **Live deployment on Base Sepolia** (real, confirmed transactions):
 
 - Repository: https://github.com/AarushMalik316/PaperSeal
-- Contract address: `0x15D43F62e4ce562C5c138C08c3e8261922B6Ae7f` → https://sepolia.basescan.org/address/0x15D43F62e4ce562C5c138C08c3e8261922B6Ae7f
-- Tx #1 (Admin authorizes issuer wallet): `0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb` → https://sepolia.basescan.org/tx/0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb
-- Tx #2 (Issuer registers CERT-2026-SYN-001): `0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904` → https://sepolia.basescan.org/tx/0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904
+- Contract address: `0x46636E242Ff0d76321C1bB91f34380aCE92f5ff9` → https://sepolia.basescan.org/address/0x46636E242Ff0d76321C1bB91f34380aCE92f5ff9
+- Tx #1 (Admin authorizes issuer wallet): `0x2889ba0efd46e20052b7f41690e7b34fbe9ec736fccbf8bc1ba1588196f9e7ac` → https://sepolia.basescan.org/tx/0x2889ba0efd46e20052b7f41690e7b34fbe9ec736fccbf8bc1ba1588196f9e7ac
+- Tx #2 (Issuer registers CERT-2026-SYN-001): `0x5b80b009b0352176966c3556b5e60b058aa9f9b3c2f82b6d154354d248f16fad` → https://sepolia.basescan.org/tx/0x5b80b009b0352176966c3556b5e60b058aa9f9b3c2f82b6d154354d248f16fad
 
 ## Path to real life.
 

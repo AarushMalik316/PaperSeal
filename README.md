@@ -22,12 +22,12 @@ The contract stores **zero personal data**: only a hash of the certificate ID, t
 | **Project** | PaperSeal: Blockchain-Based Certificate Verification (Track 1: Digital Identity) |
 | **Repo link** | https://github.com/AarushMalik316/PaperSeal |
 | **Network** | Base Sepolia testnet, Chain ID `84532` |
-| **Contract address** | `0x15D43F62e4ce562C5c138C08c3e8261922B6Ae7f` |
-| **Contract on BaseScan** | https://sepolia.basescan.org/address/0x15D43F62e4ce562C5c138C08c3e8261922B6Ae7f |
-| **Tx #1: Admin authorizes an issuer wallet** | `0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb` |
-| **Tx #1 on BaseScan** | https://sepolia.basescan.org/tx/0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb |
-| **Tx #2: Issuer registers certificate `CERT-2026-SYN-001`** | `0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904` |
-| **Tx #2 on BaseScan** | https://sepolia.basescan.org/tx/0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904 |
+| **Contract address** | `0x46636E242Ff0d76321C1bB91f34380aCE92f5ff9` |
+| **Contract on BaseScan** | https://sepolia.basescan.org/address/0x46636E242Ff0d76321C1bB91f34380aCE92f5ff9 |
+| **Tx #1: Admin authorizes an issuer wallet** | `0x2889ba0efd46e20052b7f41690e7b34fbe9ec736fccbf8bc1ba1588196f9e7ac` |
+| **Tx #1 on BaseScan** | https://sepolia.basescan.org/tx/0x2889ba0efd46e20052b7f41690e7b34fbe9ec736fccbf8bc1ba1588196f9e7ac |
+| **Tx #2: Issuer registers certificate `CERT-2026-SYN-001`** | `0x5b80b009b0352176966c3556b5e60b058aa9f9b3c2f82b6d154354d248f16fad` |
+| **Tx #2 on BaseScan** | https://sepolia.basescan.org/tx/0x5b80b009b0352176966c3556b5e60b058aa9f9b3c2f82b6d154354d248f16fad |
 | **One-page note** | [`PROJECT_NOTE.md`](./PROJECT_NOTE.md) (also in the app: footer, then *Project Note*) |
 
 ### Who did what
@@ -176,8 +176,8 @@ Everything the HASH-IT-OUT guide asks for, and where it lives in this project.
 | Google form field | Paste |
 | --- | --- |
 | Repo link | `https://github.com/AarushMalik316/PaperSeal` |
-| Contract address | `0x15D43F62e4ce562C5c138C08c3e8261922B6Ae7f` |
-| Two transaction hashes + explorer link | Tx #1: `0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb` (https://sepolia.basescan.org/tx/0x4770401f2e177e8def04036ea11ed7b0fc3f8a1820f698a270746b9624f679cb)<br>Tx #2: `0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904` (https://sepolia.basescan.org/tx/0x22deaad9a95fb0f87855fdd7c1cf5bcb57d99996215297323913f06a885ec904) |
+| Contract address | `0x46636E242Ff0d76321C1bB91f34380aCE92f5ff9` |
+| Two transaction hashes + explorer link | Tx #1: `0x2889ba0efd46e20052b7f41690e7b34fbe9ec736fccbf8bc1ba1588196f9e7ac` (https://sepolia.basescan.org/tx/0x2889ba0efd46e20052b7f41690e7b34fbe9ec736fccbf8bc1ba1588196f9e7ac)<br>Tx #2: `0x5b80b009b0352176966c3556b5e60b058aa9f9b3c2f82b6d154354d248f16fad` (https://sepolia.basescan.org/tx/0x5b80b009b0352176966c3556b5e60b058aa9f9b3c2f82b6d154354d248f16fad) |
 | One-page note | Copy the text of `PROJECT_NOTE.md`, or link to it in the repo |
 | Who did what | One line per member, from Section 1 |
 
